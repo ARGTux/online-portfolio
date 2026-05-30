@@ -1,0 +1,17 @@
+{
+  "name": "Arthur Roque Goulart",
+  "tagline": "Passionate programmer",
+  "availability_badge": "Open to Opportunities",
+  "social_links": [
+    {
+      "label": "GitHub",
+      "url": "https://github.com",
+      "icon": "⚡"
+    },
+    {
+      "label": "Gmail",
+      "url": "mailto:arthur.rgoulart30@gmail.com",
+      "icon": "✉️"
+    }
+  ]
+}
