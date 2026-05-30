@@ -51,6 +51,10 @@ def load_config() -> dict:
     return defaults
 
 
+def get_project(projects: list[dict], pid: str) -> dict | None:
+    return next((p for p in projects if p["id"] == pid), None)
+
+
 def img_to_b64(path: str | Path) -> str | None:
     try:
         with open(path, "rb") as f:
@@ -320,20 +324,33 @@ def inject_css():
     }
     .plink-repo:hover { background: rgba(255,255,255,0.09); color: #e2e8f0 !important; }
 
-    /* ── Detail panel ── */
-    .detail-wrap {
-        background: #0f0f1b;
-        border: 1px solid rgba(124,58,237,0.18);
-        border-radius: 16px;
-        padding: 30px 32px;
-        margin-top: -8px;
-        margin-bottom: 24px;
+    /* ── Detail Page ── */
+    .detail-page-header {
+        margin-top: 16px;
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
     }
-    .detail-title {
-        font-size: 1.3rem;
-        font-weight: 800;
-        color: #f1f5f9;
-        margin-bottom: 18px;
+    .detail-page-title {
+        font-size: 2.2rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #fff 0%, #c4b5fd 70%, #93c5fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+    }
+    .sidebar-card {
+        background: linear-gradient(145deg, #111119, #151522);
+        border: 1px solid rgba(124,58,237,0.18);
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: 0 16px 40px rgba(0,0,0,0.4);
     }
     .detail-section-label {
         font-size: 0.7rem;
@@ -541,14 +558,13 @@ def render_card(project: dict, idx: int):
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Detail expander ──
-    key = f"detail_{pid}_{idx}"
-    with st.expander("📖 View Details"):
-        render_detail(project)
+    if st.button("🔎  View Case Study", key=f"view_{pid}_{idx}", use_container_width=True):
+        st.session_state["selected_project_id"] = pid
+        st.rerun()
 
 
-# ─── Detail Panel ─────────────────────────────────────────────────────────────
-def render_detail(project: dict):
+# ─── Full Project View ────────────────────────────────────────────────────────
+def render_full_project_view(project: dict):
     pid         = project["id"]
     title       = project.get("title", "Untitled")
     desc        = project.get("description", "")
@@ -560,78 +576,95 @@ def render_detail(project: dict):
     attachments = project.get("attachments", [])
     updated     = project.get("updated_at", "")
 
-    st.markdown(f'<div class="detail-wrap">', unsafe_allow_html=True)
+    # Back button
+    st.write("")
+    if st.button("← Back to Projects", type="secondary"):
+        st.session_state.pop("selected_project_id", None)
+        st.rerun()
 
-    # Images carousel
-    valid_images = []
-    for img_rel in images:
-        img_path = BASE_DIR / img_rel
-        if img_path.exists():
-            valid_images.append(img_path)
+    # Title & Status Header
+    st.markdown(f"""
+    <div class="detail-page-header">
+        <h1 class="detail-page-title">{title}</h1>
+        {status_pill(status)}
+    </div>
+    """, unsafe_allow_html=True)
 
-    if valid_images:
-        st.markdown('<div class="detail-section-label">📸 Screenshots</div>', unsafe_allow_html=True)
-        if len(valid_images) == 1:
-            st.image(str(valid_images[0]), use_container_width=True)
-        else:
-            cols = st.columns(min(len(valid_images), 3))
-            for i, img_path in enumerate(valid_images):
-                with cols[i % 3]:
-                    st.image(str(img_path), use_container_width=True)
+    # 2-Column details
+    left_col, right_col = st.columns([7, 4], gap="large")
 
-    # Description (Markdown rendered)
-    st.markdown('<div class="detail-section-label">📝 Description</div>', unsafe_allow_html=True)
-    st.markdown(desc)
+    with left_col:
+        # Gallery
+        valid_images = []
+        for img_rel in images:
+            img_path = BASE_DIR / img_rel
+            if img_path.exists():
+                valid_images.append(img_path)
 
-    # Tags & status
-    left, right = st.columns([3, 1])
-    with left:
-        st.markdown('<div class="detail-section-label">🏷️ Tags</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="tag-row">{tags_html(tags)}</div>', unsafe_allow_html=True)
-    with right:
-        st.markdown('<div class="detail-section-label">Status</div>', unsafe_allow_html=True)
-        st.markdown(status_pill(status), unsafe_allow_html=True)
+        if valid_images:
+            st.markdown('<div class="detail-section-label" style="margin-top:0;">📸 Project Gallery</div>', unsafe_allow_html=True)
+            if len(valid_images) == 1:
+                st.image(str(valid_images[0]), use_container_width=True)
+            else:
+                st.image(str(valid_images[0]), use_container_width=True)
+                cols = st.columns(min(len(valid_images) - 1, 4))
+                for i, img_path in enumerate(valid_images[1:]):
+                    with cols[i % len(cols)]:
+                        st.image(str(img_path), use_container_width=True)
+            st.write("")
 
-    # Links
-    if demo or repo:
-        st.markdown('<div class="detail-section-label">🔗 Links</div>', unsafe_allow_html=True)
-        lc1, lc2, _ = st.columns([1, 1, 2])
-        if demo:
-            with lc1:
-                st.link_button("🚀 Live Demo", demo, use_container_width=True)
-        if repo:
-            with lc2:
-                st.link_button("📂 Repository", repo, use_container_width=True)
+        # Markdown Description
+        st.markdown('<div class="detail-section-label">📝 Project Case Study & Details</div>', unsafe_allow_html=True)
+        st.markdown(desc)
 
-    # Attachments
-    if attachments:
-        st.markdown('<div class="detail-section-label">📎 Attachments</div>', unsafe_allow_html=True)
-        for att in attachments:
-            att_name = att.get("name", "File")
-            att_path = BASE_DIR / att.get("path", "")
-            if att_path.exists():
-                with open(att_path, "rb") as f:
-                    file_bytes = f.read()
-                st.download_button(
-                    label=f"⬇️  {att_name}",
-                    data=file_bytes,
-                    file_name=att_name,
-                    key=f"dl_{pid}_{att_name}",
-                )
+    with right_col:
+        st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+        
+        st.markdown('<div class="detail-section-label" style="margin-top:0; color:#c4b5fd;">🏷️ Tags</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="tag-row" style="margin-bottom:20px;">{tags_html(tags)}</div>', unsafe_allow_html=True)
 
-    # Meta
-    if updated:
-        try:
-            dt = datetime.fromisoformat(updated)
-            updated_fmt = dt.strftime("%B %d, %Y")
-        except Exception:
-            updated_fmt = updated
-        st.markdown(
-            f'<div class="meta-row"><div class="meta-item">Last updated: <span>{updated_fmt}</span></div></div>',
-            unsafe_allow_html=True,
-        )
+        if demo or repo:
+            st.markdown('<div class="detail-section-label" style="color:#c4b5fd;">🔗 Links & Resources</div>', unsafe_allow_html=True)
+            if demo:
+                st.link_button("🚀 Live Demo", demo, use_container_width=True, type="primary")
+                st.write("")
+            if repo:
+                st.link_button("📂 View Code Repository", repo, use_container_width=True)
+                st.write("")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        if attachments:
+            st.markdown('<div class="detail-section-label" style="color:#c4b5fd;">📎 Downloadable Files</div>', unsafe_allow_html=True)
+            for att in attachments:
+                att_name = att.get("name", "File")
+                att_path = BASE_DIR / att.get("path", "")
+                if att_path.exists():
+                    with open(att_path, "rb") as f:
+                        file_bytes = f.read()
+                    st.download_button(
+                        label=f"⬇️  {att_name}",
+                        data=file_bytes,
+                        file_name=att_name,
+                        key=f"dl_full_{pid}_{att_name}",
+                        use_container_width=True,
+                    )
+                    st.write("")
+
+        if updated:
+            try:
+                dt = datetime.fromisoformat(updated)
+                updated_fmt = dt.strftime("%B %d, %Y")
+            except Exception:
+                updated_fmt = updated
+            st.markdown(f"""
+            <div style="font-size:0.75rem; color:#475569; margin-top:28px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05);">
+                Last updated: <span style="color:#64748b;">{updated_fmt}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.write("")
+    st.write("")
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -640,13 +673,31 @@ def main():
     cfg      = load_config()
     projects = load_projects()
 
+    # Show single-project view if selected
+    selected_id = st.session_state.get("selected_project_id")
+    if selected_id:
+        proj = get_project(projects, selected_id)
+        if proj:
+            render_full_project_view(proj)
+            
+            # Simple Footer inside the full page view
+            st.markdown('<div class="fancy-divider" style="margin-top:40px;"></div>', unsafe_allow_html=True)
+            year = datetime.now().year
+            name = cfg.get("name", "Developer")
+            st.markdown(
+                f'<div class="custom-footer">© {year} {name} · Built with Streamlit ⚡</div>',
+                unsafe_allow_html=True,
+            )
+            return
+
+    # Default grid view
     render_hero(cfg)
     render_stats(projects)
 
     # ── Filter bar ──────────────────────────────────────────────────────────
     st.markdown('<div class="filter-bar">', unsafe_allow_html=True)
     st.markdown('<div class="section-heading">Projects</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Click "View Details" on any card to read more, see screenshots & download attachments.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Click "View Case Study" on any card to read more, see screenshots & download attachments.</div>', unsafe_allow_html=True)
 
     all_tags = sorted({t for p in projects for t in p.get("tags", [])})
     fc1, fc2, fc3 = st.columns([3, 1, 1])

@@ -486,7 +486,12 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Determine project dir
-    pid = proj.get("id", str(uuid.uuid4()))
+    if is_edit:
+        pid = proj["id"]
+    else:
+        if "new_project_id" not in st.session_state:
+            st.session_state["new_project_id"] = str(uuid.uuid4())
+        pid = st.session_state["new_project_id"]
     proj_dir   = UPLOADS_DIR / pid
     img_dir    = proj_dir / "images"
     att_dir    = proj_dir / "attachments"
@@ -627,6 +632,7 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
             if st.button("Cancel", use_container_width=True):
                 st.session_state["current_view"] = "dashboard"
                 st.session_state.pop("editing_project", None)
+                st.session_state.pop("new_project_id", None)
                 st.rerun()
 
         if save_btn:
@@ -660,6 +666,7 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
                 st.success("✅ Project saved successfully!")
                 st.session_state["current_view"] = "dashboard"
                 st.session_state.pop("editing_project", None)
+                st.session_state.pop("new_project_id", None)
                 st.rerun()
 
     # ── Live Preview ──────────────────────────────────────────────────────────
