@@ -558,7 +558,7 @@ def render_card(project: dict, idx: int):
     </div>
     """, unsafe_allow_html=True)
 
-    if st.button("🔎  View Case Study", key=f"view_{pid}_{idx}", use_container_width=True):
+    if st.button("🔎  View Case Study", key=f"view_{pid}_{idx}", width="stretch"):
         st.session_state["selected_project_id"] = pid
         st.rerun()
 
@@ -604,13 +604,13 @@ def render_full_project_view(project: dict):
         if valid_images:
             st.markdown('<div class="detail-section-label" style="margin-top:0;">📸 Project Gallery</div>', unsafe_allow_html=True)
             if len(valid_images) == 1:
-                st.image(str(valid_images[0]), use_container_width=True)
+                st.image(str(valid_images[0]), width="stretch")
             else:
-                st.image(str(valid_images[0]), use_container_width=True)
+                st.image(str(valid_images[0]), width="stretch")
                 cols = st.columns(min(len(valid_images) - 1, 4))
                 for i, img_path in enumerate(valid_images[1:]):
                     with cols[i % len(cols)]:
-                        st.image(str(img_path), use_container_width=True)
+                        st.image(str(img_path), width="stretch")
             st.write("")
 
         # Markdown Description
@@ -626,10 +626,10 @@ def render_full_project_view(project: dict):
         if demo or repo:
             st.markdown('<div class="detail-section-label" style="color:#c4b5fd;">🔗 Links & Resources</div>', unsafe_allow_html=True)
             if demo:
-                st.link_button("🚀 Live Demo", demo, use_container_width=True, type="primary")
+                st.link_button("🚀 Live Demo", demo, width="stretch", type="primary")
                 st.write("")
             if repo:
-                st.link_button("📂 View Code Repository", repo, use_container_width=True)
+                st.link_button("📂 View Code Repository", repo, width="stretch")
                 st.write("")
 
         if attachments:
@@ -645,7 +645,7 @@ def render_full_project_view(project: dict):
                         data=file_bytes,
                         file_name=att_name,
                         key=f"dl_full_{pid}_{att_name}",
-                        use_container_width=True,
+                        width="stretch",
                     )
                     st.write("")
 

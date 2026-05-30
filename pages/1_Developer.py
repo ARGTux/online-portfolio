@@ -336,7 +336,7 @@ def login_gate():
         with col_f:
             st.markdown("### 🔐 Developer Login")
             pwd = st.text_input("Password", type="password", placeholder="Enter password…", key="login_pwd")
-            if st.button("Sign In →", use_container_width=True, type="primary"):
+            if st.button("Sign In →", width="stretch", type="primary"):
                 correct = st.secrets.get("DEV_PASSWORD", "portfolio2024")
                 if pwd == correct:
                     st.session_state["dev_authenticated"] = True
@@ -354,13 +354,13 @@ def render_sidebar(projects: list[dict]) -> str:
 
         view = st.session_state.get("current_view", "dashboard")
 
-        if st.button("🏠  Overview", use_container_width=True):
+        if st.button("🏠  Overview", width="stretch"):
             st.session_state["current_view"] = "dashboard"
             st.session_state.pop("editing_project", None)
             st.session_state.pop("profile_links", None)
             st.rerun()
 
-        if st.button("➕  Add New Project", use_container_width=True, type="primary"):
+        if st.button("➕  Add New Project", width="stretch", type="primary"):
             st.session_state["current_view"] = "add"
             st.session_state.pop("editing_project", None)
             st.session_state.pop("profile_links", None)
@@ -375,7 +375,7 @@ def render_sidebar(projects: list[dict]) -> str:
             icon   = status_icons.get(proj.get("status", "wip"), "⚪")
             is_sel = st.session_state.get("editing_project") == pid
             label  = f"{icon}  {proj.get('title', 'Untitled')}"
-            if st.button(label, key=f"sb_{pid}", use_container_width=True):
+            if st.button(label, key=f"sb_{pid}", width="stretch"):
                 st.session_state["current_view"] = "edit"
                 st.session_state["editing_project"] = pid
                 st.session_state.pop("profile_links", None)
@@ -384,17 +384,17 @@ def render_sidebar(projects: list[dict]) -> str:
         st.divider()
         st.markdown('<div class="sidebar-section">Settings</div>', unsafe_allow_html=True)
 
-        if st.button("👤  Edit Profile", use_container_width=True):
+        if st.button("👤  Edit Profile", width="stretch"):
             st.session_state["current_view"] = "profile"
             st.rerun()
 
-        if st.button("💾  Backup & Restore", use_container_width=True):
+        if st.button("💾  Backup & Restore", width="stretch"):
             st.session_state["current_view"] = "backup"
             st.session_state.pop("profile_links", None)
             st.rerun()
 
         st.divider()
-        if st.button("🚪  Sign Out", use_container_width=True):
+        if st.button("🚪  Sign Out", width="stretch"):
             st.session_state["dev_authenticated"] = False
             st.session_state.pop("profile_links", None)
             st.rerun()
@@ -450,16 +450,16 @@ def render_dashboard(projects: list[dict]):
                 with col_actions:
                     st.write("")
                     st.write("")
-                    if st.button("✏️ Edit", key=f"edit_{pid}", use_container_width=True):
+                    if st.button("✏️ Edit", key=f"edit_{pid}", width="stretch"):
                         st.session_state["current_view"] = "edit"
                         st.session_state["editing_project"] = pid
                         st.rerun()
-                    if st.button("🗑️ Delete", key=f"del_{pid}", use_container_width=True):
+                    if st.button("🗑️ Delete", key=f"del_{pid}", width="stretch"):
                         st.session_state[f"confirm_delete_{pid}"] = True
                         st.rerun()
                     if st.session_state.get(f"confirm_delete_{pid}"):
                         st.warning("Delete this project?")
-                        if st.button("Yes, delete", key=f"yes_del_{pid}", use_container_width=True):
+                        if st.button("Yes, delete", key=f"yes_del_{pid}", width="stretch"):
                             projects[:] = [p for p in projects if p["id"] != pid]
                             # Remove uploads
                             proj_dir = UPLOADS_DIR / pid
@@ -469,7 +469,7 @@ def render_dashboard(projects: list[dict]):
                             st.session_state.pop(f"confirm_delete_{pid}", None)
                             st.success("Project deleted.")
                             st.rerun()
-                        if st.button("Cancel", key=f"cancel_del_{pid}", use_container_width=True):
+                        if st.button("Cancel", key=f"cancel_del_{pid}", width="stretch"):
                             st.session_state.pop(f"confirm_delete_{pid}", None)
                             st.rerun()
 
@@ -558,7 +558,7 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
             to_remove = []
             for idx, img_rel in enumerate(valid_existing):
                 with img_cols[idx % 4]:
-                    st.image(str(BASE_DIR / img_rel), use_container_width=True)
+                    st.image(str(BASE_DIR / img_rel), width="stretch")
                     if st.button("🗑️", key=f"rm_img_{pid}_{idx}", help="Remove this image"):
                         to_remove.append(img_rel)
             for img_rel in to_remove:
@@ -627,9 +627,9 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
         st.write("")
         save_col, cancel_col = st.columns([2, 1])
         with save_col:
-            save_btn = st.button("💾 Save Project", type="primary", use_container_width=True)
+            save_btn = st.button("💾 Save Project", type="primary", width="stretch")
         with cancel_col:
-            if st.button("Cancel", use_container_width=True):
+            if st.button("Cancel", width="stretch"):
                 st.session_state["current_view"] = "dashboard"
                 st.session_state.pop("editing_project", None)
                 st.session_state.pop("new_project_id", None)
@@ -704,7 +704,7 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
         """, unsafe_allow_html=True)
 
         if preview_img_path:
-            st.image(str(preview_img_path), use_container_width=True)
+            st.image(str(preview_img_path), width="stretch")
         else:
             st.markdown('<div class="preview-img-placeholder">🖼️</div>', unsafe_allow_html=True)
 
@@ -783,7 +783,7 @@ def render_profile_editor():
         st.rerun()
 
     st.write("")
-    if st.button("💾 Save Profile", type="primary", use_container_width=False):
+    if st.button("💾 Save Profile", type="primary", width="content"):
         final_links = [
             lnk for lnk in st.session_state["profile_links"]
             if lnk.get("label", "").strip() or lnk.get("url", "").strip()
