@@ -345,12 +345,14 @@ def inject_css():
         background-clip: text;
         margin: 0;
     }
-    .sidebar-card {
-        background: linear-gradient(145deg, #111119, #151522);
-        border: 1px solid rgba(124,58,237,0.18);
-        border-radius: 20px;
-        padding: 28px;
-        box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: linear-gradient(145deg, #111119, #151522) !important;
+        border: 1px solid rgba(124,58,237,0.18) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 16px 40px rgba(0,0,0,0.4) !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] > div {
+        padding: 24px !important;
     }
     .detail-section-label {
         font-size: 0.7rem;
@@ -618,50 +620,47 @@ def render_full_project_view(project: dict):
         st.markdown(desc)
 
     with right_col:
-        st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
-        
-        st.markdown('<div class="detail-section-label" style="margin-top:0; color:#c4b5fd;">🏷️ Tags</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="tag-row" style="margin-bottom:20px;">{tags_html(tags)}</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="detail-section-label" style="margin-top:0; color:#c4b5fd;">🏷️ Tags</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="tag-row" style="margin-bottom:20px;">{tags_html(tags)}</div>', unsafe_allow_html=True)
 
-        if demo or repo:
-            st.markdown('<div class="detail-section-label" style="color:#c4b5fd;">🔗 Links & Resources</div>', unsafe_allow_html=True)
-            if demo:
-                st.link_button("🚀 Live Demo", demo, width="stretch", type="primary")
-                st.write("")
-            if repo:
-                st.link_button("📂 View Code Repository", repo, width="stretch")
-                st.write("")
-
-        if attachments:
-            st.markdown('<div class="detail-section-label" style="color:#c4b5fd;">📎 Downloadable Files</div>', unsafe_allow_html=True)
-            for att in attachments:
-                att_name = att.get("name", "File")
-                att_path = BASE_DIR / att.get("path", "")
-                if att_path.exists():
-                    with open(att_path, "rb") as f:
-                        file_bytes = f.read()
-                    st.download_button(
-                        label=f"⬇️  {att_name}",
-                        data=file_bytes,
-                        file_name=att_name,
-                        key=f"dl_full_{pid}_{att_name}",
-                        width="stretch",
-                    )
+            if demo or repo:
+                st.markdown('<div class="detail-section-label" style="color:#c4b5fd;">🔗 Links & Resources</div>', unsafe_allow_html=True)
+                if demo:
+                    st.link_button("🚀 Live Demo", demo, width="stretch", type="primary")
+                    st.write("")
+                if repo:
+                    st.link_button("📂 View Code Repository", repo, width="stretch")
                     st.write("")
 
-        if updated:
-            try:
-                dt = datetime.fromisoformat(updated)
-                updated_fmt = dt.strftime("%B %d, %Y")
-            except Exception:
-                updated_fmt = updated
-            st.markdown(f"""
-            <div style="font-size:0.75rem; color:#475569; margin-top:28px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05);">
-                Last updated: <span style="color:#64748b;">{updated_fmt}</span>
-            </div>
-            """, unsafe_allow_html=True)
+            if attachments:
+                st.markdown('<div class="detail-section-label" style="color:#c4b5fd;">📎 Downloadable Files</div>', unsafe_allow_html=True)
+                for att in attachments:
+                    att_name = att.get("name", "File")
+                    att_path = BASE_DIR / att.get("path", "")
+                    if att_path.exists():
+                        with open(att_path, "rb") as f:
+                            file_bytes = f.read()
+                        st.download_button(
+                            label=f"⬇️  {att_name}",
+                            data=file_bytes,
+                            file_name=att_name,
+                            key=f"dl_full_{pid}_{att_name}",
+                            width="stretch",
+                        )
+                        st.write("")
 
-        st.markdown('</div>', unsafe_allow_html=True)
+            if updated:
+                try:
+                    dt = datetime.fromisoformat(updated)
+                    updated_fmt = dt.strftime("%B %d, %Y")
+                except Exception:
+                    updated_fmt = updated
+                st.markdown(f"""
+                <div style="font-size:0.75rem; color:#475569; margin-top:28px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05);">
+                    Last updated: <span style="color:#64748b;">{updated_fmt}</span>
+                </div>
+                """, unsafe_allow_html=True)
 
     st.write("")
     st.write("")
