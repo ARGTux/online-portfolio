@@ -43,6 +43,8 @@ def load_config() -> dict:
         "tagline": "Developer & builder. Passionate about great software.",
         "availability_badge": "Open to Opportunities",
         "social_links": [],
+        "avatar": "",
+        "repo_url": "https://github.com/youruser/yourrepo",
     }
     if CONFIG_FILE.exists():
         with open(CONFIG_FILE, encoding="utf-8") as f:
@@ -691,19 +693,27 @@ def main():
 
     # Default grid view
     # Compact profile card (no hero)
+    avatar_src = cfg.get('avatar', '')
+    avatar_img = 'https://via.placeholder.com/120'
+    if avatar_src:
+        if avatar_src.startswith(('http://', 'https://')):
+            avatar_img = avatar_src
+        else:
+            local_avatar = BASE_DIR / avatar_src
+            b64 = img_to_b64(local_avatar)
+            if b64:
+                ext = local_avatar.suffix.lstrip('.').lower() or 'png'
+                avatar_img = f'data:image/{ext};base64,{b64}'
+
     st.markdown(f"""
     <div style='display:flex; align-items:center; gap:24px; margin-bottom:2rem;'>
-        <img src='https://via.placeholder.com/120' alt='Avatar' style='border-radius:50%; width:120px; height:120px;'>
+        <img src='{avatar_img}' alt='Avatar' style='border-radius:50%; width:120px; height:120px;'>
         <div>
             <h1 style='margin:0; font-size:2.4rem; color:#e2e8f0;'>{cfg.get('name', 'Your Name')}</h1>
             <p style='margin:4px 0 0; color:#94a3b8;'>{cfg.get('tagline', '')}</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
-    # Deploy on Streamlit Cloud button
-    repo_url = cfg.get('repo_url', 'https://github.com/youruser/yourrepo')
-    deploy_url = f"https://share.streamlit.io/{repo_url.removeprefix('https://github.com/') }"
-    st.link_button('🚀 Deploy on Streamlit Cloud', deploy_url, type='primary')
     
     # Stats strip follows the profile
     render_stats(projects)

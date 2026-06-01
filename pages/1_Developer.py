@@ -51,6 +51,8 @@ def load_config() -> dict:
         "tagline": "Developer & builder. Passionate about great software.",
         "availability_badge": "Open to Opportunities",
         "social_links": [],
+        "avatar": "",
+        "repo_url": "https://github.com/youruser/yourrepo",
     }
     if CONFIG_FILE.exists():
         with open(CONFIG_FILE, encoding="utf-8") as f:
@@ -392,6 +394,11 @@ def render_sidebar(projects: list[dict]) -> str:
             st.session_state["current_view"] = "backup"
             st.session_state.pop("profile_links", None)
             st.rerun()
+
+        st.markdown('<div class="sidebar-section">Deploy</div>', unsafe_allow_html=True)
+        repo_url = load_config().get("repo_url", "https://github.com/youruser/yourrepo")
+        deploy_url = f"https://share.streamlit.io/{repo_url.removeprefix('https://github.com/') }"
+        st.markdown(f'<a href="{deploy_url}" target="_blank" style="display:block; padding:10px 12px; border:1px solid rgba(148,163,184,0.2); border-radius:8px; color:#e2e8f0; text-decoration:none; margin-bottom:8px;">🚀 Deploy on Streamlit Cloud</a>', unsafe_allow_html=True)
 
         st.divider()
         if st.button("🚪  Sign Out", width="stretch"):
@@ -740,12 +747,48 @@ def render_profile_editor():
 
     cfg = load_config()
 
+    if "avatar_input" not in st.session_state:
+        st.session_state["avatar_input"] = cfg.get("avatar", "")
+
+    st.markdown('<div class="form-section">🖼️ Profile Image</div>', unsafe_allow_html=True)
+    if st.session_state["avatar_input"]:
+        avatar_preview = st.session_state["avatar_input"]
+        if avatar_preview.startswith(("http://", "https://")):
+            st.image(avatar_preview, width=120)
+        else:
+            avatar_file_path = BASE_DIR / avatar_preview
+            if avatar_file_path.exists():
+                st.image(str(avatar_file_path), width=120)
+            else:
+                st.caption("Saved avatar path not found. Enter a new URL or upload a file.")
+
+    avatar_input = st.text_input(
+        "Avatar image URL or relative path",
+        value=st.session_state["avatar_input"],
+        help="Enter an image URL or a local path under the app root, e.g. data/uploads/avatar.png",
+        key="avatar_input",
+    )
+    uploaded_avatar = st.file_uploader("Upload avatar image", type=["png", "jpg", "jpeg", "webp", "gif"])
+    if uploaded_avatar is not None:
+        ext = Path(uploaded_avatar.name).suffix.lower()
+        if ext not in [".png", ".jpg", ".jpeg", ".webp", ".gif"]:
+            st.error("Please upload a valid image file.")
+        else:
+            avatar_dest = UPLOADS_DIR / f"avatar{ext}"
+            with open(avatar_dest, "wb") as f:
+                f.write(uploaded_avatar.getbuffer())
+            st.session_state["avatar_input"] = str(avatar_dest.relative_to(BASE_DIR))
+            avatar_input = st.session_state["avatar_input"]
+            st.success("✅ Avatar uploaded. Save profile to persist the change.")
+
     st.markdown('<div class="form-section">👤 Basic Info</div>', unsafe_allow_html=True)
     name   = st.text_input("Your Name", value=cfg.get("name", ""))
     badge  = st.text_input("Availability Badge", value=cfg.get("availability_badge", "Open to Opportunities"),
                            help="Short status shown in the hero (e.g. 'Open to Opportunities')")
     tagline = st.text_area("Tagline / Bio", value=cfg.get("tagline", ""), height=100,
                            help="Shown under your name on the public side")
+    repo_url = st.text_input("GitHub repository URL", value=cfg.get("repo_url", "https://github.com/youruser/yourrepo"),
+                             help="Used for the Streamlit Cloud deploy button in the developer dashboard.")
 
     st.markdown('<div class="form-section">🔗 Social & Contact Links</div>', unsafe_allow_html=True)
     st.caption("Add or remove contact links shown in the hero section.")
@@ -791,6 +834,8 @@ def render_profile_editor():
         cfg["name"]               = name.strip()
         cfg["tagline"]            = tagline.strip()
         cfg["availability_badge"] = badge.strip()
+        cfg["repo_url"]           = repo_url.strip()
+        cfg["avatar"]             = st.session_state.get("avatar_input", "").strip()
         cfg["social_links"]       = final_links
         save_config(cfg)
         st.session_state["profile_links"] = list(final_links)
