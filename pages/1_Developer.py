@@ -750,6 +750,9 @@ def render_profile_editor():
     if "avatar_input" not in st.session_state:
         st.session_state["avatar_input"] = cfg.get("avatar", "")
 
+    if "avatar_upload_result" in st.session_state:
+        st.session_state["avatar_input"] = st.session_state.pop("avatar_upload_result")
+
     st.markdown('<div class="form-section">🖼️ Profile Image</div>', unsafe_allow_html=True)
     if st.session_state["avatar_input"]:
         avatar_preview = st.session_state["avatar_input"]
@@ -762,12 +765,6 @@ def render_profile_editor():
             else:
                 st.caption("Saved avatar path not found. Enter a new URL or upload a file.")
 
-    avatar_input = st.text_input(
-        "Avatar image URL or relative path",
-        value=st.session_state["avatar_input"],
-        help="Enter an image URL or a local path under the app root, e.g. data/uploads/avatar.png",
-        key="avatar_input",
-    )
     uploaded_avatar = st.file_uploader("Upload avatar image", type=["png", "jpg", "jpeg", "webp", "gif"])
     if uploaded_avatar is not None:
         ext = Path(uploaded_avatar.name).suffix.lower()
@@ -777,9 +774,16 @@ def render_profile_editor():
             avatar_dest = UPLOADS_DIR / f"avatar{ext}"
             with open(avatar_dest, "wb") as f:
                 f.write(uploaded_avatar.getbuffer())
-            st.session_state["avatar_input"] = str(avatar_dest.relative_to(BASE_DIR))
-            avatar_input = st.session_state["avatar_input"]
+            st.session_state["avatar_upload_result"] = str(avatar_dest.relative_to(BASE_DIR))
             st.success("✅ Avatar uploaded. Save profile to persist the change.")
+            st.experimental_rerun()
+
+    avatar_input = st.text_input(
+        "Avatar image URL or relative path",
+        value=st.session_state["avatar_input"],
+        help="Enter an image URL or a local path under the app root, e.g. data/uploads/avatar.png",
+        key="avatar_input",
+    )
 
     st.markdown('<div class="form-section">👤 Basic Info</div>', unsafe_allow_html=True)
     name   = st.text_input("Your Name", value=cfg.get("name", ""))
