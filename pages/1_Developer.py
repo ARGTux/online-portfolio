@@ -747,6 +747,17 @@ def render_profile_editor():
     tagline = st.text_area("Tagline / Bio", value=cfg.get("tagline", ""), height=100,
                            help="Shown under your name on the public side")
 
+    st.markdown('<div class="form-section">🖼️ Avatar</div>', unsafe_allow_html=True)
+    st.caption("Upload a profile picture (PNG, JPG, WebP). Recommended size: 120x120 pixels.")
+    
+    avatar_path = cfg.get("avatar_path")
+    if avatar_path and Path(avatar_path).exists():
+        st.info(f"✅ Current avatar: `{Path(avatar_path).name}`")
+    
+    uploaded_avatar = st.file_uploader("Choose avatar image", type=["png", "jpg", "jpeg", "webp"], 
+                                       label_visibility="collapsed")
+    new_avatar_path = avatar_path
+
     st.markdown('<div class="form-section">🔗 Social & Contact Links</div>', unsafe_allow_html=True)
     st.caption("Add or remove contact links shown in the hero section.")
 
@@ -783,7 +794,24 @@ def render_profile_editor():
         st.rerun()
 
     st.write("")
+    
+    st.markdown('<div class="form-section">🚀 Deployment</div>', unsafe_allow_html=True)
+    repo_url = cfg.get('repo_url', 'https://github.com/youruser/yourrepo')
+    deploy_url = f"https://share.streamlit.io/{repo_url.removeprefix('https://github.com/')}"
+    st.caption("Deploy your portfolio to Streamlit Cloud with one click.")
+    st.link_button('🚀 Deploy on Streamlit Cloud', deploy_url, type='secondary', width='content')
+    
     if st.button("💾 Save Profile", type="primary", width="content"):
+        # Handle avatar upload
+        if uploaded_avatar is not None:
+            avatar_dir = UPLOADS_DIR / "avatars"
+            avatar_dir.mkdir(parents=True, exist_ok=True)
+            avatar_filename = f"avatar_{uploaded_avatar.name}"
+            avatar_file_path = avatar_dir / avatar_filename
+            with open(avatar_file_path, "wb") as f:
+                f.write(uploaded_avatar.getbuffer())
+            new_avatar_path = str(avatar_file_path)
+        
         final_links = [
             lnk for lnk in st.session_state["profile_links"]
             if lnk.get("label", "").strip() or lnk.get("url", "").strip()
@@ -792,6 +820,8 @@ def render_profile_editor():
         cfg["tagline"]            = tagline.strip()
         cfg["availability_badge"] = badge.strip()
         cfg["social_links"]       = final_links
+        if new_avatar_path:
+            cfg["avatar_path"]    = new_avatar_path
         save_config(cfg)
         st.session_state["profile_links"] = list(final_links)
         st.success("✅ Profile saved! The public page will reflect your changes immediately.")
