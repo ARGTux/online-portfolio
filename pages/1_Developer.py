@@ -776,7 +776,7 @@ def render_profile_editor():
                 f.write(uploaded_avatar.getbuffer())
             st.session_state["avatar_upload_result"] = str(avatar_dest.relative_to(BASE_DIR))
             st.success("✅ Avatar uploaded. Save profile to persist the change.")
-            st.experimental_rerun()
+            st.rerun()
 
     avatar_input = st.text_input(
         "Avatar image URL or relative path",
