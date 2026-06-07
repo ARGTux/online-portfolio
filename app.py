@@ -639,8 +639,16 @@ def render_full_project_view(project: dict):
                 st.markdown('<div class="detail-section-label" style="color:#c4b5fd;">📎 Downloadable Files</div>', unsafe_allow_html=True)
                 for att in attachments:
                     att_name = att.get("name", "File")
+                    att_url = att.get("url", "")
                     att_path = BASE_DIR / att.get("path", "")
-                    if att_path.exists():
+                    if att_url:
+                        st.link_button(
+                            f"⬇️  {att_name}",
+                            att_url,
+                            width="stretch",
+                        )
+                        st.write("")
+                    elif att_path.exists():
                         with open(att_path, "rb") as f:
                             file_bytes = f.read()
                         st.download_button(

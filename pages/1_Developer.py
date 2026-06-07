@@ -12,8 +12,11 @@ import uuid
 import shutil
 import os
 import base64
+import hashlib
+import requests
 from pathlib import Path
 from datetime import datetime
+from urllib.parse import urlparse
 
 # ─── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -73,6 +76,114 @@ def img_to_b64(path: Path) -> str | None:
             return base64.b64encode(f.read()).decode()
     except Exception:
         return None
+
+
+def get_github_token() -> str:
+    for key in ("github_token", "GITHUB_TOKEN"):
+        try:
+            token = st.secrets.get(key, "")
+        except Exception:
+            token = ""
+        if token:
+            return str(token)
+    return ""
+
+
+def parse_github_repo_url(repo_url: str) -> tuple[str, str]:
+    parsed = urlparse(repo_url.strip())
+    if parsed.netloc.lower() not in {"github.com", "www.github.com"}:
+        raise ValueError("Please enter a GitHub repository URL, e.g. https://github.com/owner/repo")
+
+    parts = [part for part in parsed.path.strip("/").split("/") if part]
+    if len(parts) < 2:
+        raise ValueError("GitHub URL must include both owner and repository name.")
+
+    owner = parts[0]
+    repo = parts[1].removesuffix(".git")
+    return owner, repo
+
+
+def github_get(api_path: str) -> dict:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = get_github_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    url = f"https://api.github.com/{api_path.lstrip('/')}"
+    response = requests.get(url, headers=headers, timeout=20)
+    if response.status_code == 404:
+        raise FileNotFoundError(url)
+    if response.status_code >= 400:
+        raise RuntimeError(f"GitHub returned {response.status_code}: {response.text[:250]}")
+    return response.json()
+
+
+def github_get_optional(api_path: str) -> dict | None:
+    try:
+        return github_get(api_path)
+    except FileNotFoundError:
+        return None
+
+
+def decode_github_content(content_obj: dict | None) -> str:
+    if not content_obj or content_obj.get("encoding") != "base64":
+        return ""
+    raw_content = content_obj.get("content", "")
+    try:
+        return base64.b64decode(raw_content).decode("utf-8", errors="replace").strip()
+    except Exception:
+        return ""
+
+
+def title_from_repo_name(repo_name: str) -> str:
+    return repo_name.replace("-", " ").replace("_", " ").strip().title()
+
+
+def fetch_github_project_autofill(repo_url: str) -> dict:
+    owner, repo = parse_github_repo_url(repo_url)
+    repo_data = github_get(f"repos/{owner}/{repo}")
+    release = github_get_optional(f"repos/{owner}/{repo}/releases/latest")
+    readme = decode_github_content(github_get_optional(f"repos/{owner}/{repo}/readme"))
+
+    html_url = repo_data.get("html_url", repo_url.strip())
+    description = readme
+    if not description:
+        summary = repo_data.get("description") or "No repository description was provided."
+        description = f"## Overview\n\n{summary}\n\nProject repository: {html_url}"
+
+    release_assets = []
+    if release:
+        for asset in release.get("assets", []):
+            asset_url = asset.get("browser_download_url")
+            if asset_url:
+                release_assets.append({
+                    "name": asset.get("name", "Release asset"),
+                    "url": asset_url,
+                    "source": "github_release",
+                    "release": release.get("tag_name", ""),
+                })
+
+    tags = []
+    for tag in repo_data.get("topics", []) or []:
+        if tag and tag not in tags:
+            tags.append(tag)
+    language = repo_data.get("language")
+    if language and language not in tags:
+        tags.insert(0, language)
+
+    return {
+        "title": title_from_repo_name(repo_data.get("name", repo)),
+        "description": description,
+        "tags": tags,
+        "status": "live" if repo_data.get("homepage") else "wip",
+        "demo_url": repo_data.get("homepage") or "",
+        "repo_url": html_url,
+        "attachments": release_assets,
+        "github_release_url": release.get("html_url", "") if release else "",
+    }
 
 
 def now_iso() -> str:
@@ -508,12 +619,55 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
     form_col, preview_col = st.columns([3, 2], gap="large")
 
     with form_col:
+        autofill_key = f"project_autofill_{pid}"
+        autofill_data = st.session_state.get(autofill_key, {})
+
+        def field_value(name: str, default):
+            if name in autofill_data:
+                return autofill_data[name]
+            return proj.get(name, default)
+
+        # ── GitHub Autofill ──
+        st.markdown('<div class="form-section">🔎 GitHub Autofill</div>', unsafe_allow_html=True)
+        import_default = field_value("repo_url", "")
+        import_url = st.text_input(
+            "GitHub repository link",
+            value=import_default,
+            placeholder="https://github.com/owner/repository",
+            help="Paste a GitHub repository URL, then autofill the project details from repository metadata and the latest release.",
+            key=f"github_import_url_{pid}",
+        )
+        import_col, clear_col = st.columns([2, 1])
+        with import_col:
+            if st.button("Autofill from GitHub", type="primary", width="stretch", key=f"github_import_{pid}"):
+                if not import_url.strip():
+                    st.error("Paste a GitHub repository URL first.")
+                else:
+                    try:
+                        fetched = fetch_github_project_autofill(import_url)
+                        st.session_state[autofill_key] = fetched
+                        asset_count = len(fetched.get("attachments", []))
+                        if asset_count:
+                            st.success(f"Autofilled project details and linked {asset_count} latest release asset(s).")
+                        else:
+                            st.success("Autofilled project details. No latest release assets were found.")
+                        st.rerun()
+                    except Exception as exc:
+                        st.error(f"Could not autofill from GitHub: {exc}")
+        with clear_col:
+            if autofill_data and st.button("Clear Autofill", width="stretch", key=f"github_clear_{pid}"):
+                st.session_state.pop(autofill_key, None)
+                st.rerun()
+
+        if autofill_data.get("github_release_url"):
+            st.caption(f"Latest release assets will link to: {autofill_data['github_release_url']}")
+
         # ── Basic Info ──
         st.markdown('<div class="form-section">📋 Basic Information</div>', unsafe_allow_html=True)
-        title = st.text_input("Project Title *", value=proj.get("title", ""), placeholder="My Awesome Project")
+        title = st.text_input("Project Title *", value=field_value("title", ""), placeholder="My Awesome Project")
 
         status_opts = ["live", "wip", "archived"]
-        cur_status  = proj.get("status", "wip")
+        cur_status  = field_value("status", "wip")
         status = st.selectbox(
             "Status",
             status_opts,
@@ -522,13 +676,13 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
         )
 
         order = st.number_input("Display Order", min_value=1, max_value=999,
-                                value=proj.get("order", len(projects) + 1))
+                                value=field_value("order", len(projects) + 1))
 
         # ── Description ──
         st.markdown('<div class="form-section">📝 Description (Markdown supported)</div>', unsafe_allow_html=True)
         desc = st.text_area(
             "Description",
-            value=proj.get("description", ""),
+            value=field_value("description", ""),
             height=240,
             placeholder="## Overview\nDescribe your project here. **Markdown** is fully supported.",
             label_visibility="collapsed",
@@ -538,7 +692,7 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
         st.markdown('<div class="form-section">🏷️ Tags</div>', unsafe_allow_html=True)
         tags_str = st.text_input(
             "Tags (comma-separated)",
-            value=", ".join(proj.get("tags", [])),
+            value=", ".join(field_value("tags", [])),
             placeholder="Python, FastAPI, React, PostgreSQL",
             label_visibility="collapsed",
         )
@@ -548,9 +702,9 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
         st.markdown('<div class="form-section">🔗 Links</div>', unsafe_allow_html=True)
         lc1, lc2 = st.columns(2)
         with lc1:
-            demo_url = st.text_input("Live Demo URL", value=proj.get("demo_url", ""), placeholder="https://...")
+            demo_url = st.text_input("Live Demo URL", value=field_value("demo_url", ""), placeholder="https://...")
         with lc2:
-            repo_url = st.text_input("Repository URL", value=proj.get("repo_url", ""), placeholder="https://github.com/...")
+            repo_url = st.text_input("Repository URL", value=field_value("repo_url", ""), placeholder="https://github.com/...")
 
         # ── Images ──
         st.markdown('<div class="form-section">📸 Screenshots / Images</div>', unsafe_allow_html=True)
@@ -594,8 +748,11 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
         # ── Attachments ──
         st.markdown('<div class="form-section">📎 File Attachments</div>', unsafe_allow_html=True)
 
-        existing_atts: list[dict] = proj.get("attachments", [])
-        valid_atts = [a for a in existing_atts if (BASE_DIR / a.get("path", "")).exists()]
+        existing_atts: list[dict] = field_value("attachments", [])
+        valid_atts = [
+            a for a in existing_atts
+            if a.get("url") or (BASE_DIR / a.get("path", "")).exists()
+        ]
 
         if valid_atts:
             st.caption(f"{len(valid_atts)} existing attachment(s):")
@@ -603,14 +760,16 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
             for att in valid_atts:
                 ac1, ac2 = st.columns([4, 1])
                 with ac1:
-                    st.markdown(f"📄 `{att['name']}`")
+                    source = "GitHub release" if att.get("url") else "Uploaded file"
+                    st.markdown(f"📄 `{att['name']}` · {source}")
                 with ac2:
                     if st.button("🗑️", key=f"rm_att_{pid}_{att['name']}", help="Remove"):
                         to_remove_att.append(att)
             for att in to_remove_att:
-                att_path = BASE_DIR / att["path"]
-                if att_path.exists():
-                    att_path.unlink()
+                if att.get("path"):
+                    att_path = BASE_DIR / att["path"]
+                    if att_path.exists():
+                        att_path.unlink()
                 valid_atts.remove(att)
 
         uploaded_files = st.file_uploader(
@@ -640,6 +799,7 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
                 st.session_state["current_view"] = "dashboard"
                 st.session_state.pop("editing_project", None)
                 st.session_state.pop("new_project_id", None)
+                st.session_state.pop(autofill_key, None)
                 st.rerun()
 
         if save_btn:
@@ -674,6 +834,7 @@ def render_project_form(projects: list[dict], edit_pid: str | None = None):
                 st.session_state["current_view"] = "dashboard"
                 st.session_state.pop("editing_project", None)
                 st.session_state.pop("new_project_id", None)
+                st.session_state.pop(autofill_key, None)
                 st.rerun()
 
     # ── Live Preview ──────────────────────────────────────────────────────────
@@ -771,12 +932,26 @@ def render_profile_editor():
         if ext not in [".png", ".jpg", ".jpeg", ".webp", ".gif"]:
             st.error("Please upload a valid image file.")
         else:
-            avatar_dest = UPLOADS_DIR / f"avatar{ext}"
-            with open(avatar_dest, "wb") as f:
-                f.write(uploaded_avatar.getbuffer())
-            st.session_state["avatar_upload_result"] = str(avatar_dest.relative_to(BASE_DIR))
-            st.success("✅ Avatar uploaded. Save profile to persist the change.")
-            st.rerun()
+            avatar_bytes = uploaded_avatar.getvalue()
+            upload_hash = hashlib.sha256(avatar_bytes).hexdigest()
+            upload_key = f"{uploaded_avatar.name}:{upload_hash}"
+
+            if st.session_state.get("avatar_upload_key") != upload_key:
+                avatar_dest = UPLOADS_DIR / f"avatar{ext}"
+                with open(avatar_dest, "wb") as f:
+                    f.write(avatar_bytes)
+
+                avatar_path = str(avatar_dest.relative_to(BASE_DIR))
+                cfg["avatar"] = avatar_path
+                save_config(cfg)
+
+                st.session_state["avatar_input"] = avatar_path
+                st.session_state["avatar_upload_key"] = upload_key
+                st.session_state["avatar_upload_message"] = "✅ Avatar uploaded and saved."
+                st.rerun()
+
+    if "avatar_upload_message" in st.session_state:
+        st.success(st.session_state.pop("avatar_upload_message"))
 
     avatar_input = st.text_input(
         "Avatar image URL or relative path",

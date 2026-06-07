@@ -1,1 +1,34 @@
-[]
+[
+  {
+    "id": "eb8a28fd-393e-4f78-95d1-efbb23d6cd02",
+    "title": "Pac Man 1 1 Replica",
+    "description": "# PacMan 1-1 Replica\nRelive the fun of the legendary maze-chaser in this fan-made project! I built this from the ground up as my final school project for Computer Science 40S at W.C. Miller, capturing the spirit of the original arcade classic with a focus on the mechanics and gameplay you know and love.\n\nWhy you'll love it:\n- Classic Gameplay: Navigate the maze, outsmart the ghosts, and clear the board.\n- Plug-and-Play: The game automatically detects your keyboard or controller. Just hit any button to sync and start playing!\n- Built with Passion: A personal project created to celebrate the golden age of arcade gaming.\n\nHow to play:\n- Use your Arrow Keys/WASD or your Controller to move. Eat all the dots, avoid the ghosts, and go for the high score!\n\nNote: This is a fan-made, non-profit project created for fun and learning. All rights to the original concept belong to their respective owners.\n\n*Ready to play? Grab your controller, press any button, and let’s clear that maze!*",
+    "tags": [
+      "C#",
+      "Unity 6"
+    ],
+    "status": "live",
+    "demo_url": "",
+    "repo_url": "https://github.com/ARGTux/Pac-Man-1-1-Replica",
+    "images": [
+      "data/uploads/eb8a28fd-393e-4f78-95d1-efbb23d6cd02/images/Pac-Man-Logo-1a.png"
+    ],
+    "attachments": [
+      {
+        "name": "PacMan.1-1.Replica.Linux.tar.gz",
+        "url": "https://github.com/ARGTux/Pac-Man-1-1-Replica/releases/download/Release/PacMan.1-1.Replica.Linux.tar.gz",
+        "source": "github_release",
+        "release": "Release"
+      },
+      {
+        "name": "PacMan.1-1.Replica.Windows.zip",
+        "url": "https://github.com/ARGTux/Pac-Man-1-1-Replica/releases/download/Release/PacMan.1-1.Replica.Windows.zip",
+        "source": "github_release",
+        "release": "Release"
+      }
+    ],
+    "order": 1,
+    "created_at": "2026-06-07T18:48:56",
+    "updated_at": "2026-06-07T18:48:56"
+  }
+]
