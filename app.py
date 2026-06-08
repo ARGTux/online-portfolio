@@ -10,8 +10,10 @@ import streamlit as st
 import json
 import os
 import base64
+import html
 from pathlib import Path
 from datetime import datetime
+from urllib.parse import quote
 
 # ─── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -63,6 +65,37 @@ def img_to_b64(path: str | Path) -> str | None:
             return base64.b64encode(f.read()).decode()
     except Exception:
         return None
+
+
+def avatar_to_src(avatar_src: str) -> str:
+    if avatar_src and avatar_src.startswith(("http://", "https://")):
+        return avatar_src
+    if avatar_src:
+        local_avatar = BASE_DIR / avatar_src
+        b64 = img_to_b64(local_avatar)
+        if b64:
+            ext = local_avatar.suffix.lstrip(".").lower() or "png"
+            mime = "jpeg" if ext in ("jpg", "jpeg") else ext
+            return f"data:image/{mime};base64,{b64}"
+    return "https://via.placeholder.com/132"
+
+
+def render_profile_links(cfg: dict) -> str:
+    links = list(cfg.get("social_links", [])) + list(cfg.get("contacts", []))
+    buttons = []
+    for link in links:
+        label = str(link.get("label", "")).strip()
+        url = str(link.get("url", "")).strip()
+        icon = str(link.get("icon", "")).strip()
+        if not label or not url:
+            continue
+        text = f"{icon} {label}".strip()
+        target_attrs = "" if url.startswith(("mailto:", "tel:")) else ' target="_blank" rel="noopener noreferrer"'
+        buttons.append(
+            f'<a class="social-btn" href="{html.escape(url, quote=True)}"{target_attrs}>'
+            f'{html.escape(text)}</a>'
+        )
+    return "".join(buttons)
 
 
 # ─── CSS ─────────────────────────────────────────────────────────────────────
@@ -163,6 +196,76 @@ def inject_css():
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(124,58,237,0.2);
     }
+    .profile-hero {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        background: linear-gradient(145deg, #111119, #151522);
+        border: 1px solid rgba(124,58,237,0.18);
+        border-radius: 20px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+    .profile-avatar {
+        width: 132px;
+        height: 132px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(196,181,253,0.35);
+        flex: 0 0 auto;
+    }
+    .profile-content { min-width: 0; }
+    .profile-name {
+        margin: 0;
+        font-size: 2.45rem;
+        line-height: 1.1;
+        font-weight: 900;
+        background: linear-gradient(135deg, #fff 0%, #c4b5fd 58%, #93c5fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .profile-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: rgba(16,185,129,0.1);
+        border: 1px solid rgba(16,185,129,0.3);
+        color: #34d399;
+        padding: 5px 12px;
+        border-radius: 99px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+    }
+    .profile-badge::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #34d399;
+    }
+    .profile-tagline {
+        margin: 10px 0 18px;
+        color: #94a3b8;
+        font-size: 1rem;
+        line-height: 1.65;
+        max-width: 760px;
+    }
+    @media (max-width: 720px) {
+        .profile-hero {
+            align-items: flex-start;
+            flex-direction: column;
+            padding: 24px;
+        }
+        .profile-name { font-size: 2rem; }
+        .profile-avatar {
+            width: 112px;
+            height: 112px;
+        }
+    }
 
     /* ── Stats strip ── */
     .stats-strip {
@@ -226,6 +329,7 @@ def inject_css():
         border: 1px solid rgba(255,255,255,0.06);
         border-radius: 18px;
         overflow: hidden;
+        position: relative;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         margin-bottom: 24px;
     }
@@ -302,7 +406,12 @@ def inject_css():
     .status-wip      { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);  color: #fbbf24; }
     .status-archived { background: rgba(100,116,139,0.12);border: 1px solid rgba(100,116,139,0.3); color: #94a3b8; }
 
-    .link-row { display: flex; gap: 8px; }
+    .link-row {
+        display: flex;
+        gap: 8px;
+        position: relative;
+        z-index: 2;
+    }
     .plink {
         flex: 1;
         text-align: center;
@@ -325,6 +434,23 @@ def inject_css():
         color: #94a3b8 !important;
     }
     .plink-repo:hover { background: rgba(255,255,255,0.09); color: #e2e8f0 !important; }
+    .pcard-hit {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        color: inherit !important;
+        text-decoration: none !important;
+    }
+    .pcard-hit:focus-visible {
+        outline: 2px solid #a78bfa;
+        outline-offset: -4px;
+        border-radius: 18px;
+    }
+    .pcard-open-hint {
+        color: #c4b5fd;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
 
     /* ── Detail Page ── */
     .detail-page-header {
@@ -346,6 +472,9 @@ def inject_css():
         -webkit-text-fill-color: transparent;
         background-clip: text;
         margin: 0;
+    }
+    div[role="dialog"] h2 {
+        display: none !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: linear-gradient(145deg, #111119, #151522) !important;
@@ -532,7 +661,7 @@ def render_card(project: dict, idx: int):
         if b64:
             ext = Path(img_rel).suffix.lstrip(".")
             mime = "jpeg" if ext in ("jpg", "jpeg") else ext
-            img_html = f'<img class="pcard-img" src="data:image/{mime};base64,{b64}" alt="{title}">'
+            img_html = f'<img class="pcard-img" src="data:image/{mime};base64,{b64}" alt="{html.escape(title)}">'
             break
     if not img_html:
         img_html = '<div class="pcard-placeholder">🖼️</div>'
@@ -540,35 +669,33 @@ def render_card(project: dict, idx: int):
     # ── Links ──
     links_html = ""
     if demo:
-        links_html += f'<a class="plink plink-demo" href="{demo}" target="_blank">🚀 Live Demo</a>'
+        links_html += f'<a class="plink plink-demo" href="{html.escape(demo, quote=True)}" target="_blank" rel="noopener noreferrer">🚀 Live Demo</a>'
     if repo:
-        links_html += f'<a class="plink plink-repo" href="{repo}" target="_blank">📂 Repository</a>'
+        links_html += f'<a class="plink plink-repo" href="{html.escape(repo, quote=True)}" target="_blank" rel="noopener noreferrer">📂 Repository</a>'
 
     # ── Short description (first non-empty line) ──
     short = first_line(desc) or "No description provided."
+    project_url = f"?project={quote(str(pid))}"
 
     st.markdown(f"""
     <div class="pcard">
+        <a class="pcard-hit" href="{project_url}" target="_self" aria-label="Open {html.escape(title, quote=True)}"></a>
         {img_html}
         <div class="pcard-body">
             <div class="pcard-top">
-                <div class="pcard-title">{title}</div>
+                <div class="pcard-title">{html.escape(title)}</div>
                 {status_pill(status)}
             </div>
-            <p class="pcard-desc">{short}</p>
+            <p class="pcard-desc">{html.escape(short)}</p>
             <div class="tag-row">{tags_html(tags)}</div>
-            <div class="link-row">{links_html if links_html else '<span style="color:#334155;font-size:0.78rem;">No links yet</span>'}</div>
+            <div class="link-row">{links_html if links_html else '<span class="pcard-open-hint">Open project →</span>'}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    if st.button("🔎  View Case Study", key=f"view_{pid}_{idx}", width="stretch"):
-        st.session_state["selected_project_id"] = pid
-        st.rerun()
-
 
 # ─── Full Project View ────────────────────────────────────────────────────────
-def render_full_project_view(project: dict):
+def render_full_project_view(project: dict, close_label: str = "Close Project", show_close_button: bool = True):
     pid         = project["id"]
     title       = project.get("title", "Untitled")
     desc        = project.get("description", "")
@@ -580,11 +707,12 @@ def render_full_project_view(project: dict):
     attachments = project.get("attachments", [])
     updated     = project.get("updated_at", "")
 
-    # Back button
-    st.write("")
-    if st.button("← Back to Projects", type="secondary"):
-        st.session_state.pop("selected_project_id", None)
-        st.rerun()
+    if show_close_button:
+        st.write("")
+        if st.button(close_label, type="secondary"):
+            st.session_state.pop("selected_project_id", None)
+            st.query_params.clear()
+            st.rerun()
 
     # Title & Status Header
     st.markdown(f"""
@@ -676,61 +804,56 @@ def render_full_project_view(project: dict):
     st.write("")
 
 
+def render_project_overlay(project: dict):
+    def project_dialog():
+        render_full_project_view(project, show_close_button=False)
+
+    dialog_fn = getattr(st, "dialog", None) or getattr(st, "experimental_dialog", None)
+    if dialog_fn is None:
+        project_dialog()
+        return
+
+    try:
+        decorated_dialog = dialog_fn("Project details", width="large")(project_dialog)
+    except TypeError:
+        decorated_dialog = dialog_fn("Project details")(project_dialog)
+    decorated_dialog()
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
     inject_css()
     cfg      = load_config()
     projects = load_projects()
 
-    # Show single-project view if selected
-    selected_id = st.session_state.get("selected_project_id")
-    if selected_id:
-        proj = get_project(projects, selected_id)
-        if proj:
-            render_full_project_view(proj)
-            
-            # Simple Footer inside the full page view
-            st.markdown('<div class="fancy-divider" style="margin-top:40px;"></div>', unsafe_allow_html=True)
-            year = datetime.now().year
-            name = cfg.get("name", "Developer")
-            st.markdown(
-                f'<div class="custom-footer">© {year} {name} · Built with Streamlit ⚡</div>',
-                unsafe_allow_html=True,
-            )
-            return
+    # Show selected projects as an overlay after the main page renders.
+    selected_id = st.query_params.get("project") or st.session_state.get("selected_project_id")
+    selected_project = get_project(projects, selected_id) if selected_id else None
 
     # Default grid view
-    # Compact profile card (no hero)
-    avatar_src = cfg.get('avatar', '')
-    avatar_img = 'https://via.placeholder.com/120'
-    if avatar_src:
-        if avatar_src.startswith(('http://', 'https://')):
-            avatar_img = avatar_src
-        else:
-            local_avatar = BASE_DIR / avatar_src
-            b64 = img_to_b64(local_avatar)
-            if b64:
-                ext = local_avatar.suffix.lstrip('.').lower() or 'png'
-                avatar_img = f'data:image/{ext};base64,{b64}'
+    avatar_img = avatar_to_src(cfg.get("avatar", ""))
+    profile_links = render_profile_links(cfg)
+    availability = str(cfg.get("availability_badge", "")).strip()
 
     st.markdown(f"""
-    <div style='display:flex; align-items:center; gap:24px; margin-bottom:2rem;'>
-        <img src='{avatar_img}' alt='Avatar' style='border-radius:50%; width:120px; height:120px;'>
-        <div>
-            <h1 style='margin:0; font-size:2.4rem; color:#e2e8f0;'>{cfg.get('name', 'Your Name')}</h1>
-            <p style='margin:4px 0 0; color:#94a3b8;'>{cfg.get('tagline', '')}</p>
+    <div class="profile-hero">
+        <img class="profile-avatar" src="{html.escape(avatar_img, quote=True)}" alt="{html.escape(cfg.get('name', 'Profile'), quote=True)} avatar">
+        <div class="profile-content">
+            {f'<div class="profile-badge">{html.escape(availability)}</div>' if availability else ''}
+            <h1 class="profile-name">{html.escape(cfg.get('name', 'Your Name'))}</h1>
+            <p class="profile-tagline">{html.escape(cfg.get('tagline', ''))}</p>
+            {f'<div class="social-row">{profile_links}</div>' if profile_links else ''}
         </div>
     </div>
     """, unsafe_allow_html=True)
     
     # Stats strip follows the profile
     render_stats(projects)
-    render_stats(projects)
 
     # ── Filter bar ──────────────────────────────────────────────────────────
     st.markdown('<div class="filter-bar">', unsafe_allow_html=True)
     st.markdown('<div class="section-heading">Projects</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Click "View Case Study" on any card to read more, see screenshots & download attachments.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Click any project card to read more, see screenshots & download attachments.</div>', unsafe_allow_html=True)
 
     all_tags = sorted({t for p in projects for t in p.get("tags", [])})
     fc1, fc2, fc3 = st.columns([3, 1, 1])
@@ -783,6 +906,9 @@ def main():
         f'<div class="custom-footer">© {year} {name} · Built with Streamlit ⚡</div>',
         unsafe_allow_html=True,
     )
+
+    if selected_project:
+        render_project_overlay(selected_project)
 
 
 if __name__ == "__main__":

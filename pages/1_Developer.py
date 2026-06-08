@@ -14,6 +14,8 @@ import os
 import base64
 import hashlib
 import requests
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageOps
 from pathlib import Path
 from datetime import datetime
 from urllib.parse import urlparse
@@ -140,6 +142,32 @@ def decode_github_content(content_obj: dict | None) -> str:
 
 def title_from_repo_name(repo_name: str) -> str:
     return repo_name.replace("-", " ").replace("_", " ").strip().title()
+
+
+def fit_avatar_to_square(image: Image.Image, zoom: float, offset_x: int, offset_y: int, size: int = 512) -> Image.Image:
+    image = ImageOps.exif_transpose(image).convert("RGB")
+    width, height = image.size
+    scale = max(size / width, size / height) * zoom
+    resized_size = (max(size, round(width * scale)), max(size, round(height * scale)))
+    resized = image.resize(resized_size, Image.Resampling.LANCZOS)
+
+    overflow_x = max(0, resized.width - size)
+    overflow_y = max(0, resized.height - size)
+    left = round((overflow_x / 2) + (offset_x / 100) * (overflow_x / 2))
+    top = round((overflow_y / 2) + (offset_y / 100) * (overflow_y / 2))
+    left = min(max(left, 0), overflow_x)
+    top = min(max(top, 0), overflow_y)
+
+    return resized.crop((left, top, left + size, top + size))
+
+
+def circle_preview(image: Image.Image) -> Image.Image:
+    preview = image.convert("RGBA")
+    mask = Image.new("L", preview.size, 0)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((0, 0, preview.width - 1, preview.height - 1), fill=255)
+    preview.putalpha(mask)
+    return preview
 
 
 def fetch_github_project_autofill(repo_url: str) -> dict:
@@ -937,18 +965,40 @@ def render_profile_editor():
             upload_key = f"{uploaded_avatar.name}:{upload_hash}"
 
             if st.session_state.get("avatar_upload_key") != upload_key:
-                avatar_dest = UPLOADS_DIR / f"avatar{ext}"
-                with open(avatar_dest, "wb") as f:
-                    f.write(avatar_bytes)
-
-                avatar_path = str(avatar_dest.relative_to(BASE_DIR))
-                cfg["avatar"] = avatar_path
-                save_config(cfg)
-
-                st.session_state["avatar_input"] = avatar_path
                 st.session_state["avatar_upload_key"] = upload_key
-                st.session_state["avatar_upload_message"] = "✅ Avatar uploaded and saved."
-                st.rerun()
+                st.session_state["avatar_zoom"] = 1.0
+                st.session_state["avatar_offset_x"] = 0
+                st.session_state["avatar_offset_y"] = 0
+
+            try:
+                source_avatar = Image.open(BytesIO(avatar_bytes))
+                st.caption("Fit the image inside the circle before saving.")
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    zoom = st.slider("Zoom", 1.0, 3.0, key="avatar_zoom", step=0.05)
+                with c2:
+                    offset_x = st.slider("Horizontal", -100, 100, key="avatar_offset_x")
+                with c3:
+                    offset_y = st.slider("Vertical", -100, 100, key="avatar_offset_y")
+
+                fitted_avatar = fit_avatar_to_square(source_avatar, zoom, offset_x, offset_y)
+                st.image(circle_preview(fitted_avatar), width=180)
+
+                if st.button("Save fitted avatar", type="primary", width="content"):
+                    avatar_dest = UPLOADS_DIR / "avatar.png"
+                    png_bytes = BytesIO()
+                    fitted_avatar.save(png_bytes, format="PNG")
+                    avatar_dest.write_bytes(png_bytes.getvalue())
+
+                    avatar_path = str(avatar_dest.relative_to(BASE_DIR))
+                    cfg["avatar"] = avatar_path
+                    save_config(cfg)
+
+                    st.session_state["avatar_input"] = avatar_path
+                    st.session_state["avatar_upload_message"] = "✅ Fitted avatar saved."
+                    st.rerun()
+            except Exception as exc:
+                st.error(f"Could not open this image: {exc}")
 
     if "avatar_upload_message" in st.session_state:
         st.success(st.session_state.pop("avatar_upload_message"))
