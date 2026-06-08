@@ -18,7 +18,7 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps
 from pathlib import Path
 from datetime import datetime
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 # ─── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -144,6 +144,28 @@ def title_from_repo_name(repo_name: str) -> str:
     return repo_name.replace("-", " ").replace("_", " ").strip().title()
 
 
+def github_source_archive_attachment(owner: str, repo: str, repo_data: dict, release: dict | None) -> dict | None:
+    if release and release.get("tag_name"):
+        ref_type = "tags"
+        ref_name = release["tag_name"]
+        label = f"Source code ({ref_name})"
+    else:
+        ref_type = "heads"
+        ref_name = repo_data.get("default_branch", "main")
+        label = f"Source code ({ref_name})"
+
+    if not ref_name:
+        return None
+
+    encoded_ref = quote(str(ref_name), safe="")
+    return {
+        "name": f"{label}.zip",
+        "url": f"https://github.com/{owner}/{repo}/archive/refs/{ref_type}/{encoded_ref}.zip",
+        "source": "github_source_archive",
+        "release": release.get("tag_name", "") if release else "",
+    }
+
+
 def fit_avatar_to_square(image: Image.Image, zoom: float, offset_x: int, offset_y: int, size: int = 512) -> Image.Image:
     image = ImageOps.exif_transpose(image).convert("RGB")
     width, height = image.size
@@ -183,6 +205,10 @@ def fetch_github_project_autofill(repo_url: str) -> dict:
         description = f"## Overview\n\n{summary}\n\nProject repository: {html_url}"
 
     release_assets = []
+    source_archive = github_source_archive_attachment(owner, repo, repo_data, release)
+    if source_archive:
+        release_assets.append(source_archive)
+
     if release:
         for asset in release.get("assets", []):
             asset_url = asset.get("browser_download_url")

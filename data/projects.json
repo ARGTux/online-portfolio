@@ -1,7 +1,7 @@
 [
   {
     "id": "eb8a28fd-393e-4f78-95d1-efbb23d6cd02",
-    "title": "Pac Man 1 1 Replica",
+    "title": "Pac Man 1-1 Replica",
     "description": "# PacMan 1-1 Replica\nRelive the fun of the legendary maze-chaser in this fan-made project! I built this from the ground up as my final school project for Computer Science 40S at W.C. Miller, capturing the spirit of the original arcade classic with a focus on the mechanics and gameplay you know and love.\n\nWhy you'll love it:\n- Classic Gameplay: Navigate the maze, outsmart the ghosts, and clear the board.\n- Plug-and-Play: The game automatically detects your keyboard or controller. Just hit any button to sync and start playing!\n- Built with Passion: A personal project created to celebrate the golden age of arcade gaming.\n\nHow to play:\n- Use your Arrow Keys/WASD or your Controller to move. Eat all the dots, avoid the ghosts, and go for the high score!\n\nNote: This is a fan-made, non-profit project created for fun and learning. All rights to the original concept belong to their respective owners.\n\n*Ready to play? Grab your controller, press any button, and let’s clear that maze!*",
     "tags": [
       "C#",
@@ -14,6 +14,12 @@
       "data/uploads/eb8a28fd-393e-4f78-95d1-efbb23d6cd02/images/Pac-Man-Logo-1a.png"
     ],
     "attachments": [
+      {
+        "name": "Source code (Release).zip",
+        "url": "https://github.com/ARGTux/Pac-Man-1-1-Replica/archive/refs/tags/Release.zip",
+        "source": "github_source_archive",
+        "release": "Release"
+      },
       {
         "name": "PacMan.1-1.Replica.Linux.tar.gz",
         "url": "https://github.com/ARGTux/Pac-Man-1-1-Replica/releases/download/Release/PacMan.1-1.Replica.Linux.tar.gz",
@@ -29,6 +35,66 @@
     ],
     "order": 1,
     "created_at": "2026-06-07T18:48:56",
-    "updated_at": "2026-06-07T18:48:56"
+    "updated_at": "2026-06-07T19:47:47"
+  },
+  {
+    "id": "7bb71115-052d-4f66-9c32-90c4b06d5051",
+    "title": "Blackjack - AI Project",
+    "description": "# Blackjack - AI Project\nThis is an AI Blackjack game made entirely with AI. It was made for a school project on my Computer Science 40S course at W.C. Miller (Altona, MB), and the goal was to try comprehend how AI worked and how to interact with it.\n\nThe game is played like a normal Blackjack game, including players and the dealer. There is a betting system, and additional settings such as animation and betting control.\n\nTo run install `pygame` and run `blackjack-chat.py`",
+    "tags": [
+      "Python"
+    ],
+    "status": "live",
+    "demo_url": "",
+    "repo_url": "https://github.com/ARGTux/BLACKJACK---AI-Project",
+    "images": [
+      "data/uploads/7bb71115-052d-4f66-9c32-90c4b06d5051/images/Screenshot_20260607_200303.png",
+      "data/uploads/7bb71115-052d-4f66-9c32-90c4b06d5051/images/Screenshot_20260607_200316.png",
+      "data/uploads/7bb71115-052d-4f66-9c32-90c4b06d5051/images/Screenshot_20260607_200319.png",
+      "data/uploads/7bb71115-052d-4f66-9c32-90c4b06d5051/images/Screenshot_20260607_200326.png",
+      "data/uploads/7bb71115-052d-4f66-9c32-90c4b06d5051/images/Screenshot_20260607_200330.png",
+      "data/uploads/7bb71115-052d-4f66-9c32-90c4b06d5051/images/Screenshot_20260607_200338.png",
+      "data/uploads/7bb71115-052d-4f66-9c32-90c4b06d5051/images/Screenshot_20260607_200341.png"
+    ],
+    "attachments": [
+      {
+        "name": "Source code (main).zip",
+        "url": "https://github.com/ARGTux/BLACKJACK---AI-Project/archive/refs/heads/main.zip",
+        "source": "github_source_archive",
+        "release": ""
+      }
+    ],
+    "order": 2,
+    "created_at": "2026-06-07T20:04:58",
+    "updated_at": "2026-06-07T20:04:58"
+  },
+  {
+    "id": "4b626135-6b72-407c-b11a-3bee39f57482",
+    "title": "Flaskcalc",
+    "description": "# Calc\n### Description\nThis is a Flask calculator app. This was my final project for the [CS50](https://www.edx.org/learn/computer-science/harvard-university-cs50-s-introduction-to-computer-science) course I took in edX, offered by Havard University.\n\nThis project provides a web-based scientific calculator built with Flask for the backend and a lightweight client-side UI for interactions. It combines a classic calculator layout with scientific features such as trigonometric functions, logarithms, powers, roots, complex number support, and a memory register. The interface supports common calculator symbols (π, ×, ÷, √, superscript exponents), automatic closing of parentheses, and keyboard input so it feels natural to type expressions directly. The angle mode can be switched between radians and degrees, and users can store and recall a single memory value.\n\nThe app also includes a graphing view with multiple function inputs. Functions are checked live for validity and plotted using Plotly, with panning, zooming, and toggling available for each trace. Both a desktop scientific layout and a more compact mobile numpad layout are included so the app feels comfortable on different screen sizes.\n\nMost of the expression parsing and evaluation is handled client-side by math.js, while Flask mainly serves the templates and static assets. This keeps the project simple to run locally and easy to adapt or extend. It can work as a standalone calculator tool, a learning project, or something to embed inside a larger Flask application.\n\n#### Video Demo: [Flask Calc showcase](https://youtu.be/1A48G1Pfj04)\n\n## Notes\n1. Install dependencies\n\t- pip install -r requirements.txt\n2. Run the app\n\t- flask run --debug",
+    "tags": [
+      "Python",
+      "Flask",
+      "JavaScript"
+    ],
+    "status": "live",
+    "demo_url": "",
+    "repo_url": "https://github.com/ARGTux/FlaskCalc",
+    "images": [
+      "data/uploads/4b626135-6b72-407c-b11a-3bee39f57482/images/Screenshot_20260607_200837.png",
+      "data/uploads/4b626135-6b72-407c-b11a-3bee39f57482/images/Screenshot_20260607_200840.png",
+      "data/uploads/4b626135-6b72-407c-b11a-3bee39f57482/images/Screenshot_20260607_200824.png"
+    ],
+    "attachments": [
+      {
+        "name": "Source code (main).zip",
+        "url": "https://github.com/ARGTux/FlaskCalc/archive/refs/heads/main.zip",
+        "source": "github_source_archive",
+        "release": ""
+      }
+    ],
+    "order": 3,
+    "created_at": "2026-06-07T20:09:02",
+    "updated_at": "2026-06-07T20:09:02"
   }
 ]
